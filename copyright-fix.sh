@@ -1,9 +1,12 @@
 #!/usr/bin/env bash
 
-# Depends on: xargs git grep tr
+# Depends on: xargs git grep tr wc sed
 # Optional: parallel
 
 set -uo pipefail
+
+# shortest format possible; replaceable for non-git VCS?
+STATUS_CMD="git status --porcelain=1"
 
 # set up noop functions, to be overwritten from copyright-fix-hooks
 function pre-copyright-fix () {
@@ -35,7 +38,10 @@ set -e
 
 FILE=${1:-}
 if [ "$FILE" = "" ] ; then
+
     RP=$(realpath $0)
+
+    # use GNU Parallel if exists, else xargs
     XARGS=$(which parallel)
     XARGS_ARGS=""
     if [ ! -x "$XARGS" ]; then
@@ -44,25 +50,31 @@ if [ "$FILE" = "" ] ; then
     fi
 
     pre-copyright-fix
+    # if we want to run in a specific directory, go there
     DIR=$(dir-copyright-fix)
     if [ "$DIR" != "" ] && [ -e "$DIR" ]; then
         cd "$DIR"
     fi
 
     IFS=" "
-    FILES=$(git status | grep -E '\.php$' || true)
+    # only check for changed PHP files
+    FILES=$(${STATUS_CMD} | grep -E '\.php$' || true)
     if [ "$FILES" != '' ] ; then
+        # check if we wish to exclude anything from the check (e.g. dev.php or whatnot)
         EXCLUDE_FILES=$(exclude-copyright-files || true)
         if [ "$EXCLUDE_FILES" != '' ] ; then
             FILES=$(echo ${FILES} | grep -Ev ${EXCLUDE_FILES} || true)
         fi
-        FILES=$(echo ${FILES} | grep -E '(modified|added|new file):' | cut "-d " -f 2 || true)
+        # crude filter to exclude change status, name before a file was renamed, etc.
+        FILES=$(echo ${FILES} | sed 's/.* //' || true)
     fi
 
     FILES_COUNT=$(echo ${FILES} | wc -w)
     if [ "$FILES_COUNT" -gt 0 ] ; then
         log-copyright-actions $(echo "© files: $FILES_COUNT ( $(echo ${FILES}) ) ")
+        # check that only a single copyright block exists
         echo ${FILES} | $XARGS $XARGS_ARGS $RP --check-single &
+        # remove the double asterisk at comment start
         echo ${FILES} | $XARGS $XARGS_ARGS $RP
         wait
     fi
@@ -71,13 +83,15 @@ else
     if [ "$CHECK_SINGLE_COPYRIGHT" = "--check-single" ]; then
         FILE=${2:-"what"}
         grep -Hcr '@copyright' ${FILE} | grep -F '.php' | grep -Ev ':1' | sed 's/^/Problematic copyrights: /' >&2
-        echo $?
     else
-
         TMPFILE_OLD=$(mktemp)
         TMPFILE_NEW=$(mktemp)
+        # clean up after we're done
+        trap "rm ${TMPFILE_NEW} ${TMPFILE_OLD} 2>/dev/null || true" INT EXIT
+        # while we could operate on the actual file, in practice that sometimes truncates the file
         cp ${FILE} ${TMPFILE_OLD}
         OLD_HASH=$(sha1sum < ${FILE})
+        # we assume that the copyright block is right at line 2 and LF ("UN*X-style") linebreaks
         tr '\n' '\r' < ${TMPFILE_OLD} | sed 's~<?php.\/\*\*\+~<?php\r/*~' | tr '\r' '\n' > ${TMPFILE_NEW} || true
         NEW_HASH=$(sha1sum < ${TMPFILE_NEW})
         if [ "$OLD_HASH" != "$NEW_HASH" ]; then
@@ -91,8 +105,5 @@ else
             log-copyright-actions $(echo ${FILE})
             post-copyright-fix ${FILE}
         fi
-
-        rm ${TMPFILE_NEW} ${TMPFILE_OLD}
-
     fi
 fi
