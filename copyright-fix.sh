@@ -12,26 +12,35 @@ set -uo pipefail
 STATUS_CMD="git status --porcelain=1"
 
 # set up noop functions, to be overwritten from copyright-fix-hooks
+# runs at the very beginning of the script, without arguments
 function pre-copyright-fix () {
     true
 }
+# returns a directory to execute in, if any
 function dir-copyright-fix () {
     true
 }
+# called before the actual copyright fix is run, with files to check as an argument
+function pre-copyright-files-fix () {
+    true
+}
+# returns a grep regex to exclude filenames from checking, if any
 function exclude-copyright-files() {
     true
 }
+# called as a logger
 function log-copyright-actions() {
     declare LOG_INPUT=${*:-$(</dev/stdin)}
     for PARAM in ${LOG_INPUT}; do
         echo -n ${PARAM}
     done
 }
+# called with a filename after a fix is made
 function post-copyright-fix() {
     true
 }
 
-CFH="$(realpath $(dirname $0))/copyright-fix-hooks"
+CFH="$(realpath "$(dirname $0)")/copyright-fix-hooks"
 if [ -e "$CFH" ]; then
     # load the hooks if exist - see below for the functions used
     source "$CFH"
@@ -74,7 +83,8 @@ if [ "$FILE" = "" ] ; then
 
     FILES_COUNT=$(echo ${FILES} | wc -w)
     if [ "$FILES_COUNT" -gt 0 ] ; then
-        log-copyright-actions $(echo "© files: $FILES_COUNT ( $(echo ${FILES}) ) ")
+        log-copyright-actions $(echo "© files: $FILES_COUNT ( ${FILES} ) ")
+        pre-copyright-files-fix ${FILES:-}
         # check that only a single copyright block exists
         echo ${FILES} | $XARGS $XARGS_ARGS $RP --check-single &
         # remove the double asterisk at comment start
@@ -89,24 +99,23 @@ else
     else
         TMPFILE_OLD=$(mktemp)
         TMPFILE_NEW=$(mktemp)
-        # clean up after we're done
+        # clean up after we're done (we are expanding the variables now)
+        # shellcheck disable=SC2064
         trap "rm ${TMPFILE_NEW} ${TMPFILE_OLD} 2>/dev/null || true" INT EXIT
         # while we could operate on the actual file, in practice that sometimes truncates the file
-        cp ${FILE} ${TMPFILE_OLD}
-        OLD_HASH=$(sha1sum < ${FILE})
+        cp "${FILE}" "${TMPFILE_OLD}"
+        OLD_HASH=$(sha1sum < "${FILE}")
         # we assume that the copyright block is right at line 2 and LF ("UN*X-style") linebreaks
         tr '\n' '\r' < ${TMPFILE_OLD} | sed 's~<?php.\/\*\*\+~<?php\r/*~' | tr '\r' '\n' > ${TMPFILE_NEW} || true
-        NEW_HASH=$(sha1sum < ${TMPFILE_NEW})
+        NEW_HASH=$(sha1sum < "${TMPFILE_NEW}")
         if [ "$OLD_HASH" != "$NEW_HASH" ]; then
-            if [ "$(wc -l < ${TMPFILE_NEW})" -lt 5 ]; then
+            if [ "$(wc -l < "${TMPFILE_NEW}")" -lt 5 ]; then
                 echo -e  "\e[91mBAD FIX: $FILE\e[0m"
                 exit 4
             fi
-            cp ${TMPFILE_NEW} ${FILE}
-        fi
-        if [ "$OLD_HASH" != "$NEW_HASH" ]; then
-            log-copyright-actions $(echo ${FILE})
-            post-copyright-fix ${FILE}
+            cp "${TMPFILE_NEW}" "${FILE}"
+            log-copyright-actions "${FILE}"
+            post-copyright-fix "${FILE}"
         fi
     fi
 fi
