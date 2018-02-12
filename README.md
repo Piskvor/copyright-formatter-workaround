@@ -34,6 +34,6 @@ It relies on a particular order of operations:
 This order does work for me in PhpStorm 2018.1 EAP, I have no idea if the ordering could change. 
 
 ## Caveats
-I did not test this beyond [Shellcheck](https://github.com/koalaman/shellcheck) or outside my usual environment - that is, it works with current Linux and bash, and assuming a rather conventional environment (no whitespace in names etc; should work with diacritics, probably)
+I did not test this beyond [Shellcheck](https://github.com/koalaman/shellcheck) or outside my usual environment - that is, it works with current Linux and bash, and assuming a rather conventional environment (no whitespace in names etc; should work with diacritics, probably). Uses `git status` at one point - should be adaptable to another VCS easily.
 
-In other words, this *should* work, but YMMV; if it breaks, it's your fault and you can keep both parts.
+In other words, this *should* work, and it *#worksforme*; yet YMMV: if it breaks, you can keep both parts.

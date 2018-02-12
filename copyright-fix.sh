@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Workaround for a wart in PhpStorm's Update Copyrights.
+# MIT License
+
 # Depends on: xargs git grep tr wc sed
 # Optional: parallel
 
