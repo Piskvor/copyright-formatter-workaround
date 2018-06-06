@@ -6,7 +6,7 @@
 # Depends on: xargs git grep tr wc sed
 # Optional: parallel
 
-set -uo pipefail
+set -uxo pipefail
 
 # shortest format possible; replaceable for non-git VCS?
 STATUS_CMD="git status --porcelain=1"
@@ -70,7 +70,7 @@ if [ "$FILE" = "" ] ; then
 
     IFS=" "
     # only check for changed PHP files
-    FILES=$(${STATUS_CMD} | grep -E '\.php$' || true)
+    FILES=$(${STATUS_CMD} | grep -Ev '^D' | grep -E '\.php$' || true)
     if [ "$FILES" != '' ] ; then
         # check if we wish to exclude anything from the check (e.g. dev.php or whatnot)
         EXCLUDE_FILES=$(exclude-copyright-files || true)
