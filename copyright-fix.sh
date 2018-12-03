@@ -9,6 +9,7 @@
 set -uxo pipefail
 
 function get-status-cmd () {
+
     echo "git status --porcelain=1"
 }
 # shortest format possible; replaceable for non-git VCS?
@@ -44,7 +45,7 @@ function post-copyright-fix() {
 }
 
 CFH="$(realpath "$(dirname $0)")/copyright-fix-hooks"
-if [ -e "$CFH" ]; then
+if [[ -e "$CFH" ]]; then
     # load the hooks if exist - see below for the functions used
     source "$CFH"
 fi
@@ -55,14 +56,14 @@ FILE=${1:-}
 if ( echo "$FILE" | grep -c "^/dev/fd" ) ; then
     FILE="$(cat ${FILE})"
 fi
-if [ "$FILE" = "" ] ; then
+if [[ "$FILE" = "" ]] ; then
 
     RP=$(realpath $0)
 
     # use GNU Parallel if exists, else xargs
     XARGS=$(which parallel)
     XARGS_ARGS=""
-    if [ ! -x "$XARGS" ]; then
+    if [[ ! -x "$XARGS" ]]; then
         XARGS=xargs
         XARGS_ARGS="-n1"
     fi
@@ -70,17 +71,17 @@ if [ "$FILE" = "" ] ; then
     pre-copyright-fix
     # if we want to run in a specific directory, go there
     DIR=$(dir-copyright-fix)
-    if [ "$DIR" != "" ] && [ -e "$DIR" ]; then
+    if [[ "$DIR" != "" ]] && [[ -e "$DIR" ]]; then
         cd "$DIR"
     fi
 
     IFS=" "
     # only check for changed PHP files
     FILES=$(${STATUS_CMD} | grep -Ev '^D' | grep -E '\.php$' || true)
-    if [ "$FILES" != '' ] ; then
+    if [[ "$FILES" != '' ]] ; then
         # check if we wish to exclude anything from the check (e.g. dev.php or whatnot)
         EXCLUDE_FILES=$(exclude-copyright-files || true)
-        if [ "$EXCLUDE_FILES" != '' ] ; then
+        if [[ "$EXCLUDE_FILES" != '' ]] ; then
             FILES=$(echo ${FILES} | grep -Ev ${EXCLUDE_FILES} || true)
         fi
         # crude filter to exclude change status, name before a file was renamed, etc.
@@ -88,8 +89,8 @@ if [ "$FILE" = "" ] ; then
     fi
 
     FILES_COUNT=$(echo ${FILES} | wc -w)
-    if [ "$FILES_COUNT" -gt 0 ] ; then
-        log-copyright-actions $(echo "© files: $FILES_COUNT ( ${FILES} ) ")
+    if [[ "$FILES_COUNT" -gt 0 ]] ; then
+        log-copyright-actions "$(echo "© files: $FILES_COUNT ( ${FILES} ) ")"
         pre-copyright-files-fix ${FILES:-}
         # check that only a single copyright block exists
         echo ${FILES} | $XARGS $XARGS_ARGS $RP --check-single &
@@ -99,7 +100,7 @@ if [ "$FILE" = "" ] ; then
     fi
 else
     CHECK_SINGLE_COPYRIGHT=${1:-}
-    if [ "$CHECK_SINGLE_COPYRIGHT" = "--check-single" ]; then
+    if [[ "$CHECK_SINGLE_COPYRIGHT" = "--check-single" ]]; then
         FILE=${2:-"what"}
         grep -Hcr '@copyright' ${FILE} | grep -F '.php' | grep -Ev ':1' | sed 's/^/Problematic copyrights: /' >&2
     else
@@ -115,8 +116,8 @@ else
             # we assume that the copyright block is right at line 2 and LF ("UN*X-style") linebreaks
             tr '\n' '\r' < ${TMPFILE_OLD} | sed 's~<?php.\/\*\*\+~<?php\r/*~' | tr '\r' '\n' > ${TMPFILE_NEW} || true
             NEW_HASH=$(sha1sum < "${TMPFILE_NEW}")
-            if [ "$OLD_HASH" != "$NEW_HASH" ]; then
-                if [ "$(wc -l < "${TMPFILE_NEW}")" -lt 5 ]; then
+            if [[ "$OLD_HASH" != "$NEW_HASH" ]]; then
+                if [[ "$(wc -l < "${TMPFILE_NEW}")" -lt 5 ]]; then
                     echo -e  "\e[91mBAD FIX: $i\e[0m"
                     exit 4
                 fi
