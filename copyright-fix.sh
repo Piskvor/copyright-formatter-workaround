@@ -8,14 +8,12 @@
 
 set -uxo pipefail
 
+# set up noop functions, to be overwritten from copyright-fix-hooks
+# gets changed files
 function get-status-cmd () {
-
     echo "git status --porcelain=1"
 }
-# shortest format possible; replaceable for non-git VCS?
-STATUS_CMD=$(get-status-cmd)
 
-# set up noop functions, to be overwritten from copyright-fix-hooks
 # runs at the very beginning of the script, without arguments
 function pre-copyright-fix () {
     true
@@ -77,7 +75,7 @@ if [[ "$FILE" = "" ]] ; then
 
     IFS=" "
     # only check for changed PHP files
-    FILES=$(${STATUS_CMD} | grep -Ev '^D' | grep -E '\.php$' || true)
+    FILES=$(echo $(get-status-cmd) | grep -Ev '^D' | grep -E '\.php$' || true)
     if [[ "$FILES" != '' ]] ; then
         # check if we wish to exclude anything from the check (e.g. dev.php or whatnot)
         EXCLUDE_FILES=$(exclude-copyright-files || true)
