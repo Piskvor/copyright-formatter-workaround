@@ -8,8 +8,11 @@
 
 set -uxo pipefail
 
+function get-status-cmd () {
+    echo "git status --porcelain=1"
+}
 # shortest format possible; replaceable for non-git VCS?
-STATUS_CMD="git status --porcelain=1"
+STATUS_CMD=$(get-status-cmd)
 
 # set up noop functions, to be overwritten from copyright-fix-hooks
 # runs at the very beginning of the script, without arguments
