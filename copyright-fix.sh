@@ -91,7 +91,7 @@ if [[ "$FILE" = "" ]] ; then
         log-copyright-actions "$(echo "© files: $FILES_COUNT ( ${FILES} ) ")"
         pre-copyright-files-fix ${FILES:-}
         # check that only a single copyright block exists
-        echo ${FILES} | $XARGS $XARGS_ARGS $RP --check-single &
+        grep -Hcr '@copyright' ${FILES} | grep -F '.php' | grep -Ev ':1' | sed 's/^/Problematic copyrights: /' >&2 &
         # remove the double asterisk at comment start
         echo ${FILES} | $XARGS $XARGS_ARGS $RP
         wait
