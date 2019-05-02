@@ -95,6 +95,8 @@ if [[ "$FILE" = "" ]] ; then
         # remove the double asterisk at comment start
         echo ${FILES} | $XARGS $XARGS_ARGS $RP
         wait
+    else
+        exit 0
     fi
 else
     CHECK_SINGLE_COPYRIGHT=${1:-}
